@@ -2,16 +2,18 @@
 # Converter.new.convert(2, :cup, :litres) -> 0.473
 # dimensional mismatch -> Error e.g. Converter.new.convert(2, :cup, :gram)
 DimensionalMismatchError = Class.new(StandardError)
+Quantity = Struct.new(:amount, :unit)
 
 class UnitConverter
-  def initialize(amount, initial_unit, target_unit)
-    @amount = amount
-    @initial_unit = initial_unit
+  def initialize(initial_quantity, target_unit)
+    @initial_quantity = initial_quantity
     @target_unit = target_unit
   end
 
   def convert
-    @amount * conversion_factor(from: @initial_unit, to: @target_unit)
+    Quantity.new(
+      @initial_quantity.amount * conversion_factor(from: @initial_quantity.unit, to: @target_unit), @target_unit
+    )
   end
 
   private
@@ -31,13 +33,18 @@ end
 describe UnitConverter do
   describe "#convert" do
     it "translates between objects of the same dimension" do
-      converter = UnitConverter.new(2, :cup, :liter)
+      cups = Quantity.new(2, :cup)
+      converter = UnitConverter.new(cups, :liter)
 
-      expect(converter.convert).to be_within(0.001).of(0.473176)
+      result = converter.convert
+
+      expect(result.amount).to be_within(0.001).of(0.473176)
+      expect(result.unit).to eq(:liter)
     end
 
     it "raises an error if the objects are of differing dimensions" do
-      converter = UnitConverter.new(2, :cup, :grams)
+      cups = Quantity.new(2, :cup)
+      converter = UnitConverter.new(cups, :grams)
 
       expect { converter.convert }.to raise_error(DimensionalMismatchError)
     end
